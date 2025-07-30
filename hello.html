@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🧮 Quiz Matemático con Vida IA</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(to right, #f0f0f0, #dcecf7);
+      text-align: center;
+      padding: 30px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .status {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    #pregunta {
+      font-size: 22px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+    #respuesta {
+      font-size: 18px;
+      padding: 8px;
+      width: 200px;
+    }
+
+    #btnResponder {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    #mensajes {
+      margin-top: 20px;
+      text-align: left;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #fff;
+      padding: 15px;
+      border: 1px solid #ccc;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+
+    #btnResponder:disabled {
+      background-color: gray;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧮 Quiz Matemático con Vida IA</h1>
+  <div class="status" id="puntaje">Puntaje: 0</div>
+  <div class="status" id="vidaIA">Vida IA: 100</div>
+  <div class="status" id="timer">Tiempo: 10s</div>
+
+  <div id="pregunta">La pregunta aparecerá aquí</div>
+
+  <input type="text" id="respuesta" placeholder="Escribe tu respuesta" />
+  <br>
+  <button id="btnResponder">Responder</button>
+
+  <div id="mensajes"></div>
+
+  <script>
+    let puntaje = 0;
+    let nivel = 1;
+    let correctasConsecutivas = 0;
+    let respuestaActual = 0;
+    let iaVida = 100;
+    let timerSegundos = 10;
+    let timerActivo = false;
+    let timer;
+
+    const puntajeEl = document.getElementById('puntaje');
+    const vidaIAEl = document.getElementById('vidaIA');
+    const timerEl = document.getElementById('timer');
+    const preguntaEl = document.getElementById('pregunta');
+    const respuestaEl = document.getElementById('respuesta');
+    const mensajesEl = document.getElementById('mensajes');
+    const btnResponder = document.getElementById('btnResponder');
+
+    function mostrarMensaje(msg) {
+      mensajesEl.innerHTML += msg + '<br>';
+      mensajesEl.scrollTop = mensajesEl.scrollHeight;
+    }
+
+    function actualizarInterfaz() {
+      puntajeEl.textContent = `Puntaje: ${puntaje}`;
+      vidaIAEl.textContent = `Vida IA: ${Math.max(iaVida, 0)}`;
+    }
+
+    function generarPregunta() {
+      let pregunta = '';
+      let a, b, x, res;
+      if (nivel === 1) {
+        const ops = ['+', '-', '*'];
+        let op = ops[Math.floor(Math.random() * ops.length)];
+        a = Math.floor(Math.random() * 20) + 1;
+        b = Math.floor(Math.random() * 20) + 1;
+        pregunta = `${a} ${op} ${b}`;
+        respuestaActual = eval(pregunta);
+      } else if (nivel === 2) {
+        const ops = ['/', '**'];
+        let op = ops[Math.floor(Math.random() * ops.length)];
+        if (op === '/') {
+          b = Math.floor(Math.random() * 15) + 1;
+          respuestaActual = Math.floor(Math.random() * 15) + 1;
+          a = b * respuestaActual;
+          pregunta = `${a} / ${b}`;
+        } else {
+          a = Math.floor(Math.random() * 4) + 2;
+          b = Math.floor(Math.random() * 3) + 2;
+          pregunta = `${a} ** ${b}`;
+          respuestaActual = a ** b;
+        }
+      } else if (nivel === 3) {
+        const tipo = Math.random() < 0.5 ? 'raiz' : 'algebra';
+        if (tipo === 'raiz') {
+          respuestaActual = Math.floor(Math.random() * 14) + 2;
+          pregunta = `√${respuestaActual ** 2}`;
+        } else {
+          x = Math.floor(Math.random() * 14) + 2;
+          b = Math.floor(Math.random() * 14) + 2;
+          res = x + b;
+          respuestaActual = x;
+          pregunta = `x + ${b} = ${res} → ¿x?`;
+        }
+      } else {
+        const tipo = ['fraccion', 'potencia', 'algebra_avanzada'][Math.floor(Math.random() * 3)];
+        if (tipo === 'fraccion') {
+          let numerador = Math.floor(Math.random() * 46) + 5;
+          let denominador = [3, 4, 5, 6, 8, 10][Math.floor(Math.random() * 6)];
+          pregunta = `${numerador} ÷ ${denominador}`;
+          respuestaActual = numerador / denominador;
+        } else if (tipo === 'potencia') {
+          let base = Math.floor(Math.random() * 5) + 2;
+          let exp = [0.5, 1.5, 2][Math.floor(Math.random() * 3)];
+          pregunta = `${base} ** ${exp}`;
+          respuestaActual = +(base ** exp).toFixed(2);
+        } else {
+          x = Math.floor(Math.random() * 10) + 1;
+          a = Math.floor(Math.random() * 4) + 2;
+          b = Math.floor(Math.random() * 10) + 1;
+          res = a * x + b;
+          pregunta = `${a}x + ${b} = ${res} → ¿x?`;
+          respuestaActual = x;
+        }
+      }
+
+      preguntaEl.textContent = `Nivel ${nivel} → ${pregunta}`;
+    }
+
+    function iniciarTemporizador() {
+      clearInterval(timer);
+      timerSegundos = 10;
+      timerActivo = true;
+      actualizarTimer();
+      timer = setInterval(() => {
+        if (timerSegundos > 0) {
+          timerSegundos--;
+          actualizarTimer();
+        } else {
+          clearInterval(timer);
+          mostrarMensaje("⏰ ¡Tiempo agotado!");
+          prepararSiguiente();
+        }
+      }, 1000);
+    }
+
+    function actualizarTimer() {
+      timerEl.textContent = `Tiempo: ${timerSegundos}s`;
+    }
+
+    function verificarRespuesta() {
+      clearInterval(timer);
+      let entrada = respuestaEl.value.trim();
+      respuestaEl.value = "";
+
+      if (entrada === "") {
+        mostrarMensaje("❌ Entrada vacía.");
+        prepararSiguiente();
+        return;
+      }
+
+      let usuario;
+      try {
+        usuario = parseFloat(entrada);
+      } catch {
+        mostrarMensaje("❌ Entrada inválida.");
+        prepararSiguiente();
+        return;
+      }
+
+      if (Math.abs(usuario - respuestaActual) < 0.01) {
+        puntaje += 10;
+        let daño = Math.floor(Math.random() * 11) + 10;
+        iaVida -= daño;
+        correctasConsecutivas++;
+        mostrarMensaje(`✅ Correcto (+10 puntos, -${daño} vida IA). Puntaje: ${puntaje}`);
+        if (correctasConsecutivas === 3 && nivel < 4) {
+          nivel++;
+          correctasConsecutivas = 0;
+          mostrarMensaje(`⬆️ Nivel aumentado a ${nivel}`);
+        }
+      } else {
+        mostrarMensaje(`❌ Incorrecto. Respuesta correcta: ${respuestaActual}`);
+        correctasConsecutivas = 0;
+      }
+
+      actualizarInterfaz();
+
+      if (iaVida <= 0) {
+        mostrarMensaje("🎉 ¡Victoria! La IA fue derrotada.");
+        btnResponder.disabled = true;
+        return;
+      }
+
+      prepararSiguiente();
+    }
+
+    function prepararSiguiente() {
+      generarPregunta();
+      iniciarTemporizador();
+    }
+
+    btnResponder.addEventListener('click', verificarRespuesta);
+    respuestaEl.addEventListener('keypress', e => {
+      if (e.key === 'Enter') verificarRespuesta();
+    });
+
+    // Iniciar juego
+    generarPregunta();
+    iniciarTemporizador();
+  </script>
+</body>
+</html>
